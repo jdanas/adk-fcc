@@ -33,22 +33,8 @@ HIGH_RISK_COUNTRIES = [
     'Venezuela', 'Cayman Islands', 'Panama', 'Cyprus'
 ]
 
-# Currencies
-CURRENCIES = {
-    'USA': 'USD', 'Canada': 'CAD', 'United Kingdom': 'GBP', 'Germany': 'EUR',
-    'France': 'EUR', 'Japan': 'JPY', 'Australia': 'AUD', 'New Zealand': 'NZD',
-    'Sweden': 'SEK', 'Norway': 'NOK', 'Denmark': 'DKK', 'Finland': 'EUR',
-    'Mexico': 'MXN', 'Brazil': 'BRL', 'India': 'INR', 'China': 'CNY',
-    'South Africa': 'ZAR', 'Turkey': 'TRY', 'Saudi Arabia': 'SAR',
-    'UAE': 'AED', 'Thailand': 'THB', 'Malaysia': 'MYR',
-    'Russia': 'RUB', 'Belarus': 'BYN', 'North Korea': 'KPW',
-    'Iran': 'IRR', 'Afghanistan': 'AFN', 'Syria': 'SYP',
-    'Venezuela': 'VES', 'Cayman Islands': 'KYD', 'Panama': 'PAB', 
-    'Cyprus': 'EUR'
-}
-
-# Default currency if country currency is not found
-DEFAULT_CURRENCY = 'USD'
+# For Bank of Singapore prototype - using SGD as single currency
+DEFAULT_CURRENCY = 'SGD'
 
 # Status options with weighted probabilities
 STATUS_OPTIONS = ['flagged', 'reviewed', 'dismissed']
@@ -109,37 +95,42 @@ def generate_transaction(
         
         country = random.choice(country_list)
     
-    # Get currency for the country
-    currency = CURRENCIES.get(country, DEFAULT_CURRENCY)
+    # Use SGD as the single currency for Bank of Singapore prototype
+    currency = DEFAULT_CURRENCY
     
     # Determine transaction type if not specified
     if not transaction_type:
         transaction_type = random.choices(TRANSACTION_TYPES, TRANSACTION_WEIGHTS)[0]
     
-    # Generate a realistic transaction amount based on type and risk
+    # Generate realistic transaction amounts in SGD based on type and risk
     if transaction_type == 'transfer':
         if risk_level == 'High':
-            # Large transfers for high-risk
-            amount = round(random.uniform(10000, 500000), 2)
+            # Large transfers for high-risk (SGD 50,000 - 2,000,000)
+            amount = round(random.uniform(50000, 2000000), 2)
         else:
-            amount = round(random.uniform(100, 10000), 2)
+            # Normal transfers (SGD 500 - 50,000)
+            amount = round(random.uniform(500, 50000), 2)
     elif transaction_type == 'deposit':
         if risk_level == 'High':
-            # Large deposits for high-risk
-            amount = round(random.uniform(5000, 200000), 2)
+            # Large deposits for high-risk (SGD 25,000 - 800,000)
+            amount = round(random.uniform(25000, 800000), 2)
         else:
-            amount = round(random.uniform(50, 5000), 2)
+            # Normal deposits (SGD 200 - 25,000)
+            amount = round(random.uniform(200, 25000), 2)
     elif transaction_type == 'withdrawal':
         if risk_level == 'High':
-            # Large withdrawals for high-risk
-            amount = round(random.uniform(3000, 50000), 2)
+            # Large withdrawals for high-risk (SGD 15,000 - 200,000)
+            amount = round(random.uniform(15000, 200000), 2)
         else:
-            amount = round(random.uniform(20, 3000), 2)
+            # Normal withdrawals (SGD 100 - 15,000)
+            amount = round(random.uniform(100, 15000), 2)
     else:  # payment
         if risk_level == 'High':
-            amount = round(random.uniform(1000, 30000), 2)
+            # High-risk payments (SGD 5,000 - 150,000)
+            amount = round(random.uniform(5000, 150000), 2)
         else:
-            amount = round(random.uniform(10, 1000), 2)
+            # Normal payments (SGD 50 - 5,000)
+            amount = round(random.uniform(50, 5000), 2)
     
     # Transaction ID
     transaction_id = f"TXN-{str(uuid.uuid4())[:8].upper()}"
@@ -336,12 +327,12 @@ def generate_ai_analysis(transaction: Dict[str, Any]) -> Dict[str, Any]:
     else:
         base_score += random.randint(-10, 5)
     
-    # Amount contribution (relative to transaction type)
+    # Amount contribution (relative to transaction type) - SGD thresholds
     amount_thresholds = {
-        "transfer": 10000,
-        "deposit": 5000,
-        "withdrawal": 3000,
-        "payment": 1000
+        "transfer": 50000,    # SGD 50,000
+        "deposit": 25000,     # SGD 25,000
+        "withdrawal": 15000,  # SGD 15,000
+        "payment": 5000       # SGD 5,000
     }
     
     if amount > amount_thresholds[transaction_type] * 5:
@@ -381,7 +372,7 @@ def generate_ai_analysis(transaction: Dict[str, Any]) -> Dict[str, Any]:
     factors = []
     
     # Amount factor
-    amount_str = f"{amount:,.2f} {currency}"
+    amount_str = f"SGD {amount:,.2f}"
     if amount > amount_thresholds[transaction_type] * 5:
         factors.append(f"Very large {transaction_type} amount ({amount_str})")
     elif amount > amount_thresholds[transaction_type]:

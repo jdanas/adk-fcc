@@ -1,14 +1,15 @@
-# Synthetic Transaction Data Implementation
+# Synthetic Transaction Data Implementation - Bank of Singapore Prototype
 
 ## Overview
 
-We have successfully implemented a comprehensive synthetic transaction data generator using Python's Faker library to replace the static mock data in both the frontend and backend of the Financial Crime Monitoring application.
+We have successfully implemented a comprehensive synthetic transaction data generator using Python's Faker library to replace the static mock data in both the frontend and backend of the Financial Crime Monitoring application. This prototype is specifically designed for **Bank of Singapore** and uses **SGD (Singapore Dollar)** as the single currency to align with the bank's operational context.
 
 ## What's Been Implemented
 
 ### Backend Changes
 
 1. **New Data Generator Module** (`backend/data_generator.py`):
+
    - Generates realistic synthetic transactions with proper risk indicators
    - Creates diverse customer profiles and merchant information
    - Simulates real-world financial transaction patterns
@@ -16,6 +17,7 @@ We have successfully implemented a comprehensive synthetic transaction data gene
    - Generates corresponding AI analysis with risk scores and recommendations
 
 2. **Enhanced API Endpoints**:
+
    - `GET /api/transactions/flagged` - Returns synthetic transactions with filtering
    - `GET /api/transactions/{id}` - Returns specific transaction data
    - `GET /api/analysis/{id}` - Returns AI analysis for a transaction
@@ -24,8 +26,8 @@ We have successfully implemented a comprehensive synthetic transaction data gene
 3. **Realistic Data Features**:
    - **Risk-based Generation**: 30% high-risk, 70% normal transactions by default
    - **Geographic Diversity**: Transactions from 32+ countries with realistic risk profiles
-   - **Currency Mapping**: Proper currency assignment based on transaction country
-   - **Amount Scaling**: Realistic amounts based on transaction type and risk level
+   - **Single Currency**: All transactions in SGD (Singapore Dollar) for Bank of Singapore prototype
+   - **SGD-Appropriate Amounts**: Realistic amounts scaled for Singapore banking context
    - **Temporal Distribution**: Transactions spread across the last 30 days
    - **Customer Profiles**: Varied account types and risk profiles
    - **Merchant Categories**: 15+ merchant categories for payment transactions
@@ -33,6 +35,7 @@ We have successfully implemented a comprehensive synthetic transaction data gene
 ### Frontend Changes
 
 1. **Updated API Service** (`src/services/api.ts`):
+
    - Now calls the new backend endpoints for synthetic data
    - Maintains fallback mock data for offline development
    - Improved error handling and logging
@@ -46,12 +49,22 @@ We have successfully implemented a comprehensive synthetic transaction data gene
 ## Data Quality Features
 
 ### Transaction Generation
-- **Realistic Amounts**: Scaled appropriately by transaction type and risk level
+
+- **SGD Amounts**: All transactions in Singapore Dollar with appropriate ranges:
+  - Normal transfers: SGD 500 - 50,000
+  - High-risk transfers: SGD 50,000 - 2,000,000
+  - Normal deposits: SGD 200 - 25,000
+  - High-risk deposits: SGD 25,000 - 800,000
+  - Normal withdrawals: SGD 100 - 15,000
+  - High-risk withdrawals: SGD 15,000 - 200,000
+  - Normal payments: SGD 50 - 5,000
+  - High-risk payments: SGD 5,000 - 150,000
 - **Proper Risk Indicators**: High-risk transactions exhibit multiple risk factors
 - **Geographic Risk Mapping**: Countries categorized by financial crime risk levels
 - **Temporal Patterns**: Realistic timestamp distribution
 
 ### AI Analysis Generation
+
 - **Multi-factor Risk Scoring**: Considers amount, geography, customer profile, patterns
 - **Detailed Risk Factors**: Specific, actionable risk indicators
 - **Compliance Mapping**: AML/sanctions screening results
@@ -62,6 +75,7 @@ We have successfully implemented a comprehensive synthetic transaction data gene
 ### Starting the System
 
 1. **Backend** (from `/backend` directory):
+
    ```bash
    uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
@@ -110,11 +124,14 @@ curl "http://localhost:8000/api/analysis/TXN-12345678"
 
 ## Technical Notes
 
+- **Bank of Singapore Prototype**: Configured specifically for Singapore banking context
+- **Single Currency (SGD)**: All transactions use Singapore Dollar for prototype simplicity
 - Uses Python Faker library for realistic data generation
 - Weighted random selections for realistic distribution
 - Proper TypeScript types maintained in frontend
 - Error handling and fallback mechanisms in place
 - CORS configured for frontend-backend communication
 - RESTful API design following best practices
+- SGD amount thresholds calibrated for Singapore financial market
 
 The synthetic data generator provides a robust foundation for testing and demonstrating the financial crime monitoring system with realistic, diverse transaction data.
