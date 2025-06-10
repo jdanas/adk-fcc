@@ -16,14 +16,17 @@
 
 import os
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 # Import the main agent
 from agents import root_agent
+
+# Import synthetic data generator
+from data_generator import generate_transactions, generate_ai_analysis
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -246,6 +249,151 @@ async def get_agents_status():
             }
         ]
     }
+
+@app.post("/api/generate/synthetic-data")
+async def generate_synthetic_data(
+    count: int = Query(1, ge=1, le=100),
+    include_analysis: bool = Query(False)
+):
+    """
+    Generate synthetic transaction data for testing.
+    
+    Args:
+        count: Number of transactions to generate
+        include_analysis: Whether to include AI-generated analysis for each transaction
+        
+    Returns:
+        List of synthetic transactions (and analysis if requested)
+    """
+    try:
+        logger.info(f"Generating {count} synthetic transactions")
+        transactions = generate_transactions(count)
+        
+        if include_analysis:
+            logger.info("Generating AI analysis for synthetic transactions")
+            analysis = generate_ai_analysis(transactions)
+            return {"transactions": transactions, "analysis": analysis}
+        
+        return {"transactions": transactions}
+    
+    except Exception as e:
+        logger.error(f"Error generating synthetic data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Data generation failed: {str(e)}")
+
+@app.get("/api/transactions/flagged")
+async def get_flagged_transactions(
+    count: int = 20,
+    risk_indicator: str = None,
+    status: str = None,
+    transaction_id: str = None
+):
+    """
+    Get synthetic flagged transactions using the data generator.
+    
+    Args:
+        count: Number of transactions to generate (default 20)
+        risk_indicator: Filter by risk indicator ('High', 'Normal', or None for all)
+        status: Filter by status ('flagged', 'reviewed', 'dismissed', or None for all)
+        transaction_id: Filter by transaction ID (partial match)
+    
+    Returns:
+        List of synthetic transactions
+    """
+    try:
+        # Generate synthetic transactions with higher proportion of high-risk
+        transactions = generate_transactions(count=count, high_risk_percentage=0.4)
+        
+        # Apply filters
+        if risk_indicator and risk_indicator != 'All':
+            transactions = [t for t in transactions if t['riskIndicator'] == risk_indicator]
+        
+        if status and status != 'All':
+            transactions = [t for t in transactions if t['status'] == status]
+        
+        if transaction_id:
+            transactions = [t for t in transactions if transaction_id.lower() in t['id'].lower()]
+        
+        logger.info(f"Generated {len(transactions)} synthetic transactions")
+        return transactions
+        
+    except Exception as e:
+        logger.error(f"Error generating transactions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate transactions: {str(e)}")
+
+@app.get("/api/transactions/{transaction_id}")
+async def get_transaction_by_id(transaction_id: str):
+    """
+    Get a specific transaction by ID. For demo purposes, generates a synthetic transaction.
+    
+    Args:
+        transaction_id: The transaction ID to retrieve
+    
+    Returns:
+        Transaction data or 404 if not found
+    """
+    try:
+        # For demo purposes, generate a transaction with the specific ID
+        # In a real system, this would query the database
+        transaction = generate_transactions(count=1)[0]
+        transaction['id'] = transaction_id
+        
+        logger.info(f"Retrieved transaction {transaction_id}")
+        return transaction
+        
+    except Exception as e:
+        logger.error(f"Error retrieving transaction {transaction_id}: {str(e)}")
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+@app.get("/api/analysis/{transaction_id}")
+async def get_ai_analysis_by_id(transaction_id: str):
+    """
+    Get AI analysis for a specific transaction.
+    
+    Args:
+        transaction_id: The transaction ID to analyze
+    
+    Returns:
+        AI analysis data
+    """
+    try:
+        # Generate a synthetic transaction and its analysis
+        transaction = generate_transactions(count=1)[0]
+        transaction['id'] = transaction_id
+        
+        # Generate AI analysis for the transaction
+        analysis = generate_ai_analysis(transaction)
+        
+        logger.info(f"Generated AI analysis for transaction {transaction_id}")
+        return analysis
+        
+    except Exception as e:
+        logger.error(f"Error generating analysis for transaction {transaction_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate analysis: {str(e)}")
+
+@app.patch("/api/transactions/{transaction_id}/status")
+async def update_transaction_status(transaction_id: str, status_update: dict):
+    """
+    Update the status of a transaction.
+    
+    Args:
+        transaction_id: The transaction ID to update
+        status_update: Dictionary containing the new status
+    
+    Returns:
+        Success message
+    """
+    try:
+        new_status = status_update.get("status")
+        if new_status not in ["flagged", "reviewed", "dismissed"]:
+            raise HTTPException(status_code=400, detail="Invalid status value")
+        
+        # In a real system, this would update the database
+        logger.info(f"Updated transaction {transaction_id} status to {new_status}")
+        return {"message": f"Transaction {transaction_id} status updated to {new_status}"}
+        
+    except Exception as e:
+        logger.error(f"Error updating transaction {transaction_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update transaction: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
