@@ -32,6 +32,11 @@ from data_generator import generate_transactions, generate_ai_analysis
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Simple in-memory store for demo purposes
+# In production, this would be a database
+transaction_store = {}
+analysis_store = {}
+
 app = FastAPI(
     title="Financial Crime Monitoring API",
     description="AI-powered financial crime detection using Google ADK agents",
@@ -303,6 +308,10 @@ async def get_flagged_transactions(
         # Generate synthetic transactions with higher proportion of high-risk
         transactions = generate_transactions(count=count, high_risk_percentage=0.4)
         
+        # Store transactions in memory for consistent retrieval
+        for transaction in transactions:
+            transaction_store[transaction['id']] = transaction
+        
         # Apply filters
         if risk_indicator and risk_indicator != 'All':
             transactions = [t for t in transactions if t['riskIndicator'] == risk_indicator]
@@ -313,7 +322,7 @@ async def get_flagged_transactions(
         if transaction_id:
             transactions = [t for t in transactions if transaction_id.lower() in t['id'].lower()]
         
-        logger.info(f"Generated {len(transactions)} synthetic transactions")
+        logger.info(f"Generated and stored {len(transactions)} synthetic transactions")
         return transactions
         
     except Exception as e:
@@ -323,7 +332,7 @@ async def get_flagged_transactions(
 @app.get("/api/transactions/{transaction_id}")
 async def get_transaction_by_id(transaction_id: str):
     """
-    Get a specific transaction by ID. For demo purposes, generates a synthetic transaction.
+    Get a specific transaction by ID from the in-memory store.
     
     Args:
         transaction_id: The transaction ID to retrieve
@@ -332,12 +341,19 @@ async def get_transaction_by_id(transaction_id: str):
         Transaction data or 404 if not found
     """
     try:
-        # For demo purposes, generate a transaction with the specific ID
-        # In a real system, this would query the database
+        # First try to get from store
+        if transaction_id in transaction_store:
+            logger.info(f"Retrieved transaction {transaction_id} from store")
+            return transaction_store[transaction_id]
+        
+        # If not found, generate a new one (for demo purposes)
         transaction = generate_transactions(count=1)[0]
         transaction['id'] = transaction_id
         
-        logger.info(f"Retrieved transaction {transaction_id}")
+        # Store it for future use
+        transaction_store[transaction_id] = transaction
+        
+        logger.info(f"Generated and stored new transaction {transaction_id}")
         return transaction
         
     except Exception as e:
@@ -347,23 +363,35 @@ async def get_transaction_by_id(transaction_id: str):
 @app.get("/api/analysis/{transaction_id}")
 async def get_ai_analysis_by_id(transaction_id: str):
     """
-    Get AI analysis for a specific transaction.
+    Get AI analysis for a specific transaction using the stored transaction data.
     
     Args:
         transaction_id: The transaction ID to analyze
     
     Returns:
-        AI analysis data
+        AI analysis data that matches the stored transaction
     """
     try:
-        # Generate a synthetic transaction and its analysis
-        transaction = generate_transactions(count=1)[0]
-        transaction['id'] = transaction_id
+        # Check if we already have analysis cached
+        if transaction_id in analysis_store:
+            logger.info(f"Retrieved cached analysis for transaction {transaction_id}")
+            return analysis_store[transaction_id]
         
-        # Generate AI analysis for the transaction
+        # Get the transaction data (either from store or generate new)
+        if transaction_id in transaction_store:
+            transaction = transaction_store[transaction_id]
+            logger.info(f"Using stored transaction data for analysis {transaction_id}")
+        else:
+            # If transaction not in store, get it first (this will store it)
+            transaction = await get_transaction_by_id(transaction_id)
+        
+        # Generate AI analysis based on the actual transaction data
         analysis = generate_ai_analysis(transaction)
         
-        logger.info(f"Generated AI analysis for transaction {transaction_id}")
+        # Cache the analysis
+        analysis_store[transaction_id] = analysis
+        
+        logger.info(f"Generated and cached AI analysis for transaction {transaction_id}")
         return analysis
         
     except Exception as e:
@@ -394,6 +422,34 @@ async def update_transaction_status(transaction_id: str, status_update: dict):
     except Exception as e:
         logger.error(f"Error updating transaction {transaction_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update transaction: {str(e)}")
+
+@app.delete("/api/cache/clear")
+async def clear_cache():
+    """
+    Clear the transaction and analysis cache (for testing purposes).
+    
+    Returns:
+        Success message with cache statistics
+    """
+    try:
+        transaction_count = len(transaction_store)
+        analysis_count = len(analysis_store)
+        
+        transaction_store.clear()
+        analysis_store.clear()
+        
+        logger.info(f"Cleared cache: {transaction_count} transactions, {analysis_count} analyses")
+        return {
+            "message": "Cache cleared successfully",
+            "cleared": {
+                "transactions": transaction_count,
+                "analyses": analysis_count
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error clearing cache: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
