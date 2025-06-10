@@ -11,6 +11,7 @@ pydantic>=2.5.0
 python-dateutil>=2.8.0
 python-multipart>=0.0.6
 requests>=2.31.0
+faker>=20.1.0  # For generating synthetic transaction data
 
 # Development and testing
 pytest>=7.4.0
